@@ -87,11 +87,11 @@ End Sub
 '
 '
 ' CLASS METHODS
-Public Sub Create(MatlabPath As R5PostFileObject, MatlabScriptPath As R5PostFileObject, strFile As R5PostFileObject, Paramfile As R5PostFileObject, _
+Public Sub Create(matlabPath As R5PostFileObject, MatlabScriptPath As R5PostFileObject, strFile As R5PostFileObject, Paramfile As R5PostFileObject, _
                   postScriptFile As R5PostFileObject, Title As String, tMin As Double, tMax As Double)
 ' Action: Creates the current process given different inputs
 '
-    FilesetRequired.Add MatlabPath
+    FilesetRequired.Add matlabPath
     FilesetRequired.Add MatlabScriptPath
     FilesetInitial.Add strFile
     FilesetInitial.Add Paramfile
@@ -113,15 +113,20 @@ Public Function GetShellCommand(Optional WorkingFolder As String) As String
 '         as a relative path (relative to WorkingFolder)
 '
 '
-
+    Dim s As New ResourceSprintf
     Dim Shellstring As String
     
-    Dim strFilePath As String, psFilePath As String
+    Dim strFilePath As String, psFilePath As String, paramFilePath As String
+    Dim matlabPath As String, scriptFolder As String
+    matlabPath = FilesetRequired(1).FullPath
+    scriptFolder = FilesetRequired(2).FolderPath
     
     strFilePath = FilesetFinal(2).getRelativePath(WorkingFolder)
     psFilePath = FilesetFinal(1).getRelativePath(WorkingFolder)
+    paramFilePath = FilesetInitial(2).getRelativePath(WorkingFolder)
     
-    Shellstring = """" & FilesetRequired(1).FullPath & """ -nodisplay -nosplash -nodesktop -r ""addpath " & FilesetRequired(2).FolderPath & ";plottaStripFil('batch','-s','" & strFilePath & "','-t','" & psFilePath & "','tmin'," & PlotTimeMin & ",'tmax'," & PlotTimeMax & ",'title','" & PlotTitle & "','tsamp',1);pause(3);exit"""
+    Shellstring = s.sprintf("""%s"" -nodisplay -nosplash -nodesktop -r ""addpath %s;plottaStripFil('batch','-s','%s','-p','%s','-t','%s','tmin',%f,'tmax',%f,'Title','%s','tsamp',1);pause(3);exit""", matlabPath, scriptFolder, strFilePath, paramFilePath, psFilePath, PlotTimeMin, PlotTimeMax, PlotTitle)
+    'Shellstring = """" & FilesetRequired(1).FullPath & """ -nodisplay -nosplash -nodesktop -r ""addpath " & FilesetRequired(2).FolderPath & ";plottaStripFil('batch','-s','" & strFilePath & "','-t','" & psFilePath & "','tmin'," & PlotTimeMin & ",'tmax'," & PlotTimeMax & ",'title','" & PlotTitle & "','tsamp',1);pause(3);exit"""
     GetShellCommand = Shellstring
     ' matlab -nodisplay -nosplash -nodesktop -r "addpath C:\RELAP5\Script\plottaStripFil;plottaStripFil('batch','-s','$1.str','-t','$1.ps','-m','$1_MaxMin.ps','-xls','$1_MaxMin.xls','tmin',$2,'tmax',$3,'title','$4','tsamp',1);pause(3);exit"
 

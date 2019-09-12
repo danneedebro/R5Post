@@ -9,7 +9,7 @@ End Function
 
 
 
-Sub fixLinks()
+Private Sub fixLinks_old()
     ' Fixar länkar. Markera de celler som ska fixas och kör makrot
     Dim currRow, currCol, currRowCnt
     
@@ -32,11 +32,9 @@ End Sub
 
 
 Sub DoTheConga()
-    Dim myRange As Range, currCell As Range
-    Set myRange = Selection
-
-    For Each currCell In myRange.Cells
-        currCell.Hyperlinks.Delete
-        currCell.Hyperlinks.Add Anchor:=currCell, Address:="", SubAddress:=ActiveSheet.Name & "!" & currCell.Address
-    Next currCell
+    
+    With ActiveSheet
+        .A
+    End With
+    
 End Sub
