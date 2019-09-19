@@ -70,6 +70,42 @@ Private Sub TestProcessTHistPlot()
 End Sub
 
 
+Private Sub TestAptplotOpen()
+    Debug.Print "<TESTING PROCESS>"
+
+    Dim sht As Worksheet
+    Set sht = ThisWorkbook.ActiveSheet
+
+    Dim pwd As String
+    pwd = ThisWorkbook.Path
+
+    Dim Proc As New ProcessAptplotOpen
+    Dim AptplotPath As New R5PostFileObject
+    AptplotPath.CreateByParts sht.Range(APTPLOT_PATH)
+    
+    Dim Rstfile As New R5PostFileObject
+    Rstfile.CreateByParts pwd, "Case1\Case1.rst"
+    
+    Proc.Create AptplotPath, Rstfile
+    Debug.Print Proc.GetShellCommand
+    
+    Dim Calculate As New MainProcessChain
+    Calculate.Add Proc
+    
+    If Calculate.ProcessChainOK = True Then
+        Dim ShellCommand As String
+        Dim retval
+        ShellCommand = Calculate.GetShellCommand(Rstfile.FolderPath & "\", Rstfile.Basename)
+    
+        ChDir Rstfile.FolderPath
+
+        retval = Shell("cmd /S /K" & " dir && timeout 1 && " & ShellCommand, 1)
+    End If
+    
+    
+    
+End Sub
+
 
 Private Sub TestProcessChain()
     Debug.Print "<TESTING PROCESSCHAIN>"
