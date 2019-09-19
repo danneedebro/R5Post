@@ -37,11 +37,12 @@ Const GLOBAL_STRIPFILE = "B9"
 Const GLOBAL_PARAMFILE = "B10"
 Const GLOBAL_STRIPFILE_FORCES = "B11"
 
-Const R5_PATH = "G3"
-Const MATLAB_PATH = "G4"
-Const THISTPLOT_PATH = "G5"
-Const R2DMX_PATH = "G6"
-Const GHOSTSCRIPT_PATH = "G7"
+Public Const R5_PATH = "G3"
+Public Const MATLAB_PATH = "G4"
+Public Const THISTPLOT_PATH = "G5"
+Public Const R2DMX_PATH = "G6"
+Public Const GHOSTSCRIPT_PATH = "G7"
+Public Const APTPLOT_PATH = "G8"
 
 Const CURRENTSHEET = "E1"
 Const DEBUG_FLAG = "B7"
@@ -53,6 +54,9 @@ Private Enum TypeOfAction
     Post
     CalcAndPost
     ActionPs2pdf
+    AptplotOpenDemux
+    AptplotOpenRestart
+    AptplotOpenStrip
 End Enum
 
 Sub HyperlinkClicked(ByVal cellRow As Long, ByVal cellCol As Long)
@@ -73,6 +77,13 @@ Sub HyperlinkClicked(ByVal cellRow As Long, ByVal cellCol As Long)
             CalculateOrPost cellCol, CalcAndPost
         Case PS2PDF_ROW
             CalculateOrPost cellCol, ActionPs2pdf
+        Case DMXFILE_ROW
+            AptplotOpen cellCol, AptplotOpenDemux
+        Case RSTFILE_ROW
+            AptplotOpen cellCol, AptplotOpenRestart
+        Case STRFILE1_ROW
+            AptplotOpen cellCol, AptplotOpenStrip
+            
     End Select
 End Sub
 
@@ -121,6 +132,59 @@ Sub LocateFile()
     
 
 End Sub
+
+Private Sub AptplotOpen(Cellcolumn As Long, Action As TypeOfAction)
+' Action: Opens aptplot and automatically reads selected file
+'
+    Dim answ
+    Dim sht As Worksheet
+    Set sht = ThisWorkbook.ActiveSheet
+
+    Dim pwd As String
+    pwd = ThisWorkbook.Path
+
+    Dim ProcAptplotOpen As New ProcessAptplotOpen
+    Dim AptplotPath As New R5PostFileObject
+    AptplotPath.CreateByParts sht.Range(APTPLOT_PATH)
+    
+    Dim FileToOpen As New R5PostFileObject
+    
+    Select Case Action
+        Case AptplotOpenDemux
+            FileToOpen.CreateByParts pwd, sht.Cells(DMXFILE_ROW, Cellcolumn)
+            ProcAptplotOpen.Create AptplotPath, FileToOpen, "demux"
+            
+        Case AptplotOpenRestart
+            FileToOpen.CreateByParts pwd, sht.Cells(RSTFILE_ROW, Cellcolumn)
+            ProcAptplotOpen.Create AptplotPath, FileToOpen, "restart"
+        
+        Case AptplotOpenStrip
+            FileToOpen.CreateByParts pwd, sht.Cells(STRFILE1_ROW, Cellcolumn)
+            ProcAptplotOpen.Create AptplotPath, FileToOpen, "strip"
+        Case Else
+            Exit Sub
+    End Select
+    
+    
+    Dim Calculate As New MainProcessChain
+    Calculate.Add ProcAptplotOpen
+    
+    If Calculate.ProcessChainOK = True Then
+        Dim ShellCommand As String
+        ShellCommand = Calculate.GetShellCommand(FileToOpen.FolderPath & "\", FileToOpen.Basename)
+        
+        Dim questionString As String
+        questionString = "Open file in Aptplot?" & vbNewLine & vbNewLine & SplitShellCommand(ShellCommand)
+        answ = MsgBox(questionString, vbQuestion + vbYesNoCancel, "Open file with Aptplot?")
+        If answ <> vbYes Then Exit Sub
+        
+        ChDir FileToOpen.FolderPath
+        Dim retval
+        retval = Shell("cmd /S /C" & " dir && timeout 1 && " & ShellCommand, 1)
+    End If
+End Sub
+
+
 
 
 Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
@@ -333,7 +397,7 @@ Sub RefreshFileDates()
     
     ' Check executables
     Dim ExecPaths As Range
-    Set ExecPaths = Range(Range(R5_PATH), Range(GHOSTSCRIPT_PATH))
+    Set ExecPaths = Range(Range(R5_PATH), Range(APTPLOT_PATH))
     For i = 1 To ExecPaths.Rows.Count
         fileCurr.CreateByParts ExecPaths(i)
         If fileCurr.FileExists = True Then
