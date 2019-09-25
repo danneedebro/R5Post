@@ -109,7 +109,7 @@ Private Sub TestAptplotOpen()
     Dim Rstfile As New R5PostFileObject
     Rstfile.CreateByParts pwd, "Case1\Case1.rst"
     
-    Proc.Create AptplotPath, Rstfile
+    Proc.Create AptplotPath, Rstfile, "restart"
     Debug.Print Proc.GetShellCommand
     
     Dim Calculate As New MainProcessChain

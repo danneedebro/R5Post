@@ -374,8 +374,12 @@ Sub RefreshFileDates()
 ' Action: Refreshes the file dates
 '
     Dim i As Integer, j As Integer
+    Dim sht As Worksheet
+    Set sht = ThisWorkbook.ActiveSheet
 
-    Range(CURRENTSHEET).Value = "[" & ThisWorkbook.FullName & "]'" & ActiveSheet.Name & "'"
+    ToggleAutoCalc False  ' Turns off automatic update
+
+    sht.Range(CURRENTSHEET).Value = "[" & ThisWorkbook.FullName & "]'" & ActiveSheet.Name & "'"
 
     ' Workbook path
     Dim Workbookfile As New R5PostFileObject
@@ -389,11 +393,11 @@ Sub RefreshFileDates()
     Dim ColumnCurr As Integer
     For i = CASE_COLUMN_START To CASE_COLUMN_END Step 2
         For j = LOGFILE_ROW To PDFFILE1_ROW
-            fileCurr.CreateByParts ThisWorkbook.Path, Cells(j, i)
-            Set OutputCellCurr = Cells(j, i + 1)
+            fileCurr.CreateByParts ThisWorkbook.Path, sht.Cells(j, i)
+            Set OutputCellCurr = sht.Cells(j, i + 1)
             If fileCurr.FileExists = True Then
                 OutputCellCurr.Value = fileCurr.DateLastModified
-            ElseIf Cells(j, i) = "" Then
+            ElseIf sht.Cells(j, i) = "" Then
                 OutputCellCurr.Value = ""
             Else
                 OutputCellCurr.Value = "(missing)"
@@ -403,33 +407,89 @@ Sub RefreshFileDates()
     
     ' Check executables
     Dim ExecPaths As Range
-    Set ExecPaths = Range(Range(R5_PATH), Range(APTPLOT_PATH))
+    Set ExecPaths = sht.Range(sht.Range(R5_PATH), sht.Range(APTPLOT_PATH))
     For i = 1 To ExecPaths.Rows.Count
         fileCurr.CreateByParts ExecPaths(i)
         If fileCurr.FileExists = True Then
-            Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = "OK"
+            sht.Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = "OK"
         ElseIf ExecPaths(i) = "" Then
-            Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = ""
+            sht.Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = ""
         Else
-            Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = "(missing)"
+            sht.Cells(ExecPaths(i).Row, ExecPaths(i).Column + 4) = "(missing)"
         End If
     Next i
     
 
     ' Check global files
     Dim GlobalFilePaths As Range
-    Set GlobalFilePaths = Range(Range(GLOBAL_STRIPFILE), Range(GLOBAL_STRIPFILE_FORCES))
+    Set GlobalFilePaths = sht.Range(sht.Range(GLOBAL_STRIPFILE), sht.Range(GLOBAL_STRIPFILE_FORCES))
     For i = 1 To GlobalFilePaths.Rows.Count
         fileCurr.CreateByParts ThisWorkbook.Path, GlobalFilePaths(i)
         If fileCurr.FileExists = True Then
-            Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = fileCurr.DateLastModified
+            sht.Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = fileCurr.DateLastModified
         ElseIf GlobalFilePaths(i) = "" Then
-            Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = ""
+            sht.Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = ""
         Else
-            Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = "(missing)"
+            sht.Cells(GlobalFilePaths(i).Row, GlobalFilePaths(i).Column + 1) = "(missing)"
         End If
     Next i
     
+    ToggleAutoCalc True  ' Turns on automatic update
+
+End Sub
+
+Sub SetPaths()
+' Action: Sets the path
+'
+    Dim sht As Worksheet
+    Set sht = ThisWorkbook.ActiveSheet
+    
+    
+    ' Check executables
+    Dim fileCurr As New R5PostFileObject
+    Dim ExecPaths As Range, i As Integer, j As Integer
+    Set ExecPaths = sht.Range(sht.Cells(sht.Range(R5_PATH).Row, sht.Range(R5_PATH).Column - 1), sht.Range(APTPLOT_PATH))
+    For i = 1 To ExecPaths.Rows.Count
+        fileCurr.CreateByParts ExecPaths(i, 2)
+        If fileCurr.FileExists = False Or ExecPaths(i, 2) = "" Then
+            
+            
+            ' Open the file dialog
+            With Application.FileDialog(msoFileDialogOpen)
+                .AllowMultiSelect = False
+                
+                .Title = ExecPaths(i, 1) & " Path"
+                On Error Resume Next
+                .InitialFileName = Split(ExecPaths(i, 1), "=")(0)
+                .Show
+                
+                ' Display paths of each file selected
+                For j = 1 To .SelectedItems.Count
+                    ExecPaths(i, 2) = .SelectedItems(j)
+                Next j
+            
+            End With
+            
+            
+        End If
+    Next i
+    
+    
+ 
+    Dim lngCount As Long
+ 
+    ' Open the file dialog
+    With Application.FileDialog(msoFileDialogOpen)
+        .AllowMultiSelect = True
+        .Show
+ 
+        ' Display paths of each file selected
+        For lngCount = 1 To .SelectedItems.Count
+            MsgBox .SelectedItems(lngCount)
+        Next lngCount
+ 
+    End With
+ 
 
 End Sub
 
@@ -529,7 +589,17 @@ next_case:
 End Sub
 
 
-
+Private Sub ToggleAutoCalc(Optional TurnOn As Boolean = True)
+    If TurnOn = True Then
+        Application.Calculation = xlCalculationAutomatic
+        Application.ScreenUpdating = True
+        Application.EnableEvents = True
+    Else
+        Application.Calculation = xlCalculationManual
+        Application.ScreenUpdating = False
+        Application.EnableEvents = False
+    End If
+End Sub
 
 
 
