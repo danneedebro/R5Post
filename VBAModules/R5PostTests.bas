@@ -14,8 +14,31 @@ Private Sub TestFileObject()
     Debug.Assert Inputfile.Extension = "i"
     Debug.Assert Inputfile.FolderPath = ThisWorkbook.Path & "\Case1"
     Debug.Assert Inputfile.GetRelativePath(ThisWorkbook.Path & "\") = "Case1\Case1.i"
+    Debug.Print "Drive = """ & Inputfile.DriveName & """"
     
     Debug.Print "</TESTING FILE OBJECT>"
+End Sub
+
+Private Sub TestChangeDirAndDrive()
+    Debug.Print "<TESTING CHANGE DIR AND CHANGE DRIVE>"
+    Dim xlsfile As New R5PostFileObject
+    xlsfile.CreateByParts ThisWorkbook.FullName
+    
+    ' Current directory on start
+    ChDir "H:\Temp"
+    ChDrive "H:"
+    
+    Debug.Print "Current directory before change = """ & CurDir & """"
+    
+    ChDir xlsfile.FolderPath
+    
+    Debug.Print "Current directory after chdir = """ & CurDir & """"   ' same as before if curr dir is on another drive
+    
+    ChDrive xlsfile.DriveName
+    
+    Debug.Print "Current directory after chdrive = """ & CurDir & """"  ' now it should be the same
+    
+    Debug.Print "</TESTING CHANGE DIR AND CHANGE DRIVE>"
 End Sub
 
 

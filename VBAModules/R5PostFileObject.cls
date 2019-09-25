@@ -44,6 +44,12 @@ Public Property Get Extension() As String
     Extension = fso.GetExtensionName(pFullPath)
 End Property
 
+Public Property Get DriveName() As String
+' Action: Returns the drive of the file
+'         "C:\Work\File.dat" = "C:"
+    DriveName = fso.GetDriveName(pFullPath)
+End Property
+
 Public Property Get FileExists() As Boolean
 ' Action: Returns true if file exists, false otherwise
 '

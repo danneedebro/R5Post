@@ -1,5 +1,5 @@
 Attribute VB_Name = "R5PostMain"
-' R5Post v1.0.0-beta.3
+' R5Post v1.0.0-beta.4
 '
 '
 '
@@ -178,7 +178,9 @@ Private Sub AptplotOpen(Cellcolumn As Long, Action As TypeOfAction)
         answ = MsgBox(questionString, vbQuestion + vbYesNoCancel, "Open file with Aptplot?")
         If answ <> vbYes Then Exit Sub
         
+        ' Change drive and current directory on that drive
         ChDir FileToOpen.FolderPath
+        ChDir FileToOpen.DriveName
         Dim retval
         retval = Shell("cmd /S /C" & " dir && timeout 1 && " & ShellCommand, 1)
     End If
@@ -333,8 +335,12 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
         answ = MsgBox(questionString, vbQuestion + vbYesNoCancel, questionTitle)
         If answ <> vbYes Then Exit Sub
         
-        Dim retval
+        ' Change drive and current directory on that drive
         ChDir Inputfile.FolderPath
+        ChDir Inputfile.DriveName
+        Debug.Print "Current directory is = """ & CurDir & """"
+        
+        Dim retval
         Dim stayOpen As String
         If Range(DEBUG_FLAG).Value = 1 Then stayOpen = "/K" Else stayOpen = "/C"
         retval = Shell("cmd /S " & stayOpen & " dir && timeout 1 && " & Calculate.GetShellCommand(Inputfile.FolderPath & "\", Inputfile.Basename), 1)
