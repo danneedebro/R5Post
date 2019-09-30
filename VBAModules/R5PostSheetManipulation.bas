@@ -53,7 +53,7 @@ Sub ResetFormat()
                 Case DMXFILE_ROW, STRFILE1_ROW
                     formulaBase = "=ELLER({COL}{JROW}<{COL}{INP_ROW};{COL}{JROW}<{COL}{RST_ROW})"
                                     
-                Case PSFILE1_ROW
+                Case PSFILE1_ROW, CSVFILE_ROW
                     formulaBase = "=ELLER({COL}{JROW}<{COL}{INP_ROW};{COL}{JROW}<{COL}{RST_ROW};{COL}{JROW}<{COL}{STR_ROW})"
                 
                 Case PDFFILE1_ROW

@@ -1,5 +1,5 @@
 Attribute VB_Name = "R5PostMain"
-' R5Post v1.0.0-beta.4
+' R5Post v1.0.0-beta.5
 '
 '
 '
@@ -30,8 +30,9 @@ Public Const DMXFILE_ROW = ROW_ZERO + 9
 Public Const STRIPFILE1_ROW = ROW_ZERO + 10
 Public Const PARAMFILE_ROW = ROW_ZERO + 11
 Public Const STRFILE1_ROW = ROW_ZERO + 12
-Public Const PSFILE1_ROW = ROW_ZERO + 13
-Public Const PDFFILE1_ROW = ROW_ZERO + 14
+Public Const CSVFILE_ROW = ROW_ZERO + 13
+Public Const PSFILE1_ROW = ROW_ZERO + 14
+Public Const PDFFILE1_ROW = ROW_ZERO + 15
 
 Const GLOBAL_STRIPFILE = "B9"
 Const GLOBAL_PARAMFILE = "B10"
@@ -43,6 +44,7 @@ Public Const THISTPLOT_PATH = "G5"
 Public Const R2DMX_PATH = "G6"
 Public Const GHOSTSCRIPT_PATH = "G7"
 Public Const APTPLOT_PATH = "G8"
+Public Const STR2CSV_PATH = "G9"
 
 Const CURRENTSHEET = "E1"
 Const DEBUG_FLAG = "B7"
@@ -180,7 +182,7 @@ Private Sub AptplotOpen(Cellcolumn As Long, Action As TypeOfAction)
         
         ' Change drive and current directory on that drive
         ChDir FileToOpen.FolderPath
-        ChDir FileToOpen.DriveName
+        ChDrive FileToOpen.DriveName
         Dim retval
         retval = Shell("cmd /S /C" & " dir && timeout 1 && " & ShellCommand, 1)
     End If
@@ -195,6 +197,9 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     ' Misc
     Dim answ
 
+    Dim sht As Worksheet
+    Set sht = ThisWorkbook.ActiveSheet
+
     ' Workbook path
     Dim Workbookfile As New R5PostFileObject
     Workbookfile.Create ThisWorkbook.FullName
@@ -207,14 +212,16 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     Dim THistPlotPath As New R5PostFileObject
     Dim R2DMXPath As New R5PostFileObject
     Dim GhostScriptPath As New R5PostFileObject
+    Dim Str2CsvPath As New R5PostFileObject
     
-    R5Path.Create Range(R5_PATH)
+    R5Path.Create sht.Range(R5_PATH)
     R5SteamTable.Create R5Path.FolderPath & "\tpfh2onew"
     R5SteamTableOld.Create R5Path.FolderPath & "\tpfh2o"
-    MatlabPath.Create Range(MATLAB_PATH)
-    THistPlotPath.Create Range(THISTPLOT_PATH)
-    R2DMXPath.Create Range(R2DMX_PATH)
-    GhostScriptPath.Create Range(GHOSTSCRIPT_PATH)
+    MatlabPath.Create sht.Range(MATLAB_PATH)
+    THistPlotPath.Create sht.Range(THISTPLOT_PATH)
+    R2DMXPath.Create sht.Range(R2DMX_PATH)
+    GhostScriptPath.Create sht.Range(GHOSTSCRIPT_PATH)
+    Str2CsvPath.Create sht.Range(STR2CSV_PATH)
     
     ' Define files
     Dim Inputfile As New R5PostFileObject
@@ -227,8 +234,9 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     Dim PSfile1 As New R5PostFileObject
     Dim PDFfile1 As New R5PostFileObject
     Dim Logfile As New R5PostFileObject
+    Dim Csvfile As New R5PostFileObject
     
-    With ThisWorkbook.ActiveSheet
+    With sht
         Inputfile.CreateByParts ThisWorkbook.Path, .Cells(INPUTFILE_ROW, Cellcolumn)
         OutputFile.CreateByParts ThisWorkbook.Path, .Cells(OUTPUTFILE_ROW, Cellcolumn)
         RestartFile.CreateByParts ThisWorkbook.Path, .Cells(RSTFILE_ROW, Cellcolumn)
@@ -248,6 +256,7 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
         PSfile1.CreateByParts ThisWorkbook.Path, .Cells(PSFILE1_ROW, Cellcolumn)
         PDFfile1.CreateByParts ThisWorkbook.Path, .Cells(PDFFILE1_ROW, Cellcolumn)
         Logfile.CreateByParts ThisWorkbook.Path, .Cells(LOGFILE_ROW, Cellcolumn)
+        Csvfile.CreateByParts ThisWorkbook.Path, .Cells(CSVFILE_ROW, Cellcolumn)
         
         ' Define parameters
         Dim PlotTitle As String
@@ -280,6 +289,10 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     Dim ProcPs2Pdf As New ProcessPs2Pdf
     ProcPs2Pdf.Create GhostScriptPath, PSfile1, PDFfile1
     
+    ' Create Str2Csv process
+    Dim ProcStr2Csv As New ProcessStr2Csv
+    ProcStr2Csv.Create Str2CsvPath, Stripfile1, Csvfile
+    
     ' Create process chain
     Dim Calculate As New MainProcessChain
     
@@ -295,27 +308,33 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     ElseIf Action = CalcAndPost Then
         Calculate.Add ProcR5Calc
         Calculate.Add ProcR5Strip
+        Calculate.Add ProcStr2Csv
         Calculate.Add ProcR2DMX
         Calculate.Add ProcTHistPlot
+        
         questionTitle = "Perform calculation+postprocessing?"
         questionString = "Perform RELAP5-calculation and postprocessing on '" & Inputfile.FullPath & "'?"
         
     ElseIf Action = Post Then
         Calculate.Add ProcR5Strip
         Calculate.Add ProcR2DMX
+        Calculate.Add ProcStr2Csv
         Calculate.Add ProcTHistPlot
+        
         questionTitle = "Perform postprocessing?"
         questionString = "Perform RELAP5-postprocessing on '" & RestartFile.FullPath & "'?"
         
     ElseIf Action = CalcStripDemux Then
         Calculate.Add ProcR5Calc
         Calculate.Add ProcR5Strip
+        Calculate.Add ProcStr2Csv
         Calculate.Add ProcR2DMX
         questionTitle = "Perform calculation+strip+demux?"
         questionString = "Perform RELAP5-calculation and strip+demux on '" & Inputfile.FullPath & "'?"
         
     ElseIf Action = StripDemux Then
         Calculate.Add ProcR5Strip
+        Calculate.Add ProcStr2Csv
         Calculate.Add ProcR2DMX
         questionTitle = "Perform strip+demux?"
         questionString = "Perform Strip and demux on '" & RestartFile.FullPath & "'?"
@@ -337,7 +356,7 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
         
         ' Change drive and current directory on that drive
         ChDir Inputfile.FolderPath
-        ChDir Inputfile.DriveName
+        ChDrive Inputfile.DriveName
         Debug.Print "Current directory is = """ & CurDir & """"
         
         Dim retval
@@ -407,7 +426,7 @@ Sub RefreshFileDates()
     
     ' Check executables
     Dim ExecPaths As Range
-    Set ExecPaths = sht.Range(sht.Range(R5_PATH), sht.Range(APTPLOT_PATH))
+    Set ExecPaths = sht.Range(sht.Range(R5_PATH), sht.Range(STR2CSV_PATH))
     For i = 1 To ExecPaths.Rows.Count
         fileCurr.CreateByParts ExecPaths(i)
         If fileCurr.FileExists = True Then
@@ -448,7 +467,7 @@ Sub SetPaths()
     ' Check executables
     Dim fileCurr As New R5PostFileObject
     Dim ExecPaths As Range, i As Integer, j As Integer
-    Set ExecPaths = sht.Range(sht.Cells(sht.Range(R5_PATH).Row, sht.Range(R5_PATH).Column - 1), sht.Range(APTPLOT_PATH))
+    Set ExecPaths = sht.Range(sht.Cells(sht.Range(R5_PATH).Row, sht.Range(R5_PATH).Column - 1), sht.Range(STR2CSV_PATH))
     For i = 1 To ExecPaths.Rows.Count
         fileCurr.CreateByParts ExecPaths(i, 2)
         If fileCurr.FileExists = False Or ExecPaths(i, 2) = "" Then
