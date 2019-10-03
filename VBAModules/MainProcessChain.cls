@@ -93,14 +93,13 @@ Next_j:
         Next j
     Next i
     
+    ' Check required files (typical .exe)
     For i = 1 To pProcesses.Count
         For j = 1 To Process(i).FilesRequired.Count
             If Process(i).FilesRequired(j).FileExists = False Then
                 ErrorMessage = ErrorMessage & vbNewLine & vbNewLine & "Process " & i & ": Warning, '" & Process(i).FilesRequired(j).FullPath & "' doesn't exist but might be in path"
-                'MsgBox Process(i).FilesRequired(j).FullPath & " doesn't exist"
             End If
         Next j
-    
     Next i
 
     Dim answ

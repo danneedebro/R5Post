@@ -1,5 +1,5 @@
 Attribute VB_Name = "R5PostMain"
-' R5Post v1.0.0-beta.5
+' R5Post v1.0.0-beta.6
 '
 '
 '
@@ -192,7 +192,7 @@ End Sub
 
 
 Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
-' Action:
+' Action: Executes a process chain to perform a simulation or post process the result
 '
     ' Misc
     Dim answ
@@ -223,50 +223,88 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     GhostScriptPath.Create sht.Range(GHOSTSCRIPT_PATH)
     Str2CsvPath.Create sht.Range(STR2CSV_PATH)
     
-    ' Define files
-    Dim Inputfile As New R5PostFileObject
-    Dim OutputFile As New R5PostFileObject
-    Dim RestartFile As New R5PostFileObject
-    Dim Demuxfile As New R5PostFileObject
-    Dim StripRequestfile1 As New R5PostFileObject
-    Dim Paramfile As New R5PostFileObject
-    Dim Stripfile1 As New R5PostFileObject
-    Dim PSfile1 As New R5PostFileObject
-    Dim PDFfile1 As New R5PostFileObject
-    Dim Logfile As New R5PostFileObject
-    Dim Csvfile As New R5PostFileObject
+    ' ---------------DEFINE FILES-----------------------
+    '
+    ' RELAP5 restart file to start simulation from - existing and used in ProcCopySSRestartFile
+    Dim SteadyStateRestartfile As New R5PostFileObject
+    SteadyStateRestartfile.CreateByParts ThisWorkbook.Path, sht.Cells(LOGFILE_ROW, Cellcolumn)
     
-    With sht
-        Inputfile.CreateByParts ThisWorkbook.Path, .Cells(INPUTFILE_ROW, Cellcolumn)
-        OutputFile.CreateByParts ThisWorkbook.Path, .Cells(OUTPUTFILE_ROW, Cellcolumn)
-        RestartFile.CreateByParts ThisWorkbook.Path, .Cells(RSTFILE_ROW, Cellcolumn)
-        Demuxfile.CreateByParts ThisWorkbook.Path, .Cells(DMXFILE_ROW, Cellcolumn)
-        If .Cells(STRIPFILE1_ROW, Cellcolumn) = "" Then
-            StripRequestfile1.CreateByParts ThisWorkbook.Path, Range(GLOBAL_STRIPFILE)
-        Else
-            StripRequestfile1.CreateByParts ThisWorkbook.Path, .Cells(STRIPFILE1_ROW, Cellcolumn)
-        End If
-        If .Cells(PARAMFILE_ROW, Cellcolumn) = "" Then
-            Paramfile.CreateByParts ThisWorkbook.Path, .Range(GLOBAL_PARAMFILE)
-        Else
-            Paramfile.CreateByParts ThisWorkbook.Path, .Cells(PARAMFILE_ROW, Cellcolumn)
-        End If
-        
-        Stripfile1.CreateByParts ThisWorkbook.Path, .Cells(STRFILE1_ROW, Cellcolumn)
-        PSfile1.CreateByParts ThisWorkbook.Path, .Cells(PSFILE1_ROW, Cellcolumn)
-        PDFfile1.CreateByParts ThisWorkbook.Path, .Cells(PDFFILE1_ROW, Cellcolumn)
-        Logfile.CreateByParts ThisWorkbook.Path, .Cells(LOGFILE_ROW, Cellcolumn)
-        Csvfile.CreateByParts ThisWorkbook.Path, .Cells(CSVFILE_ROW, Cellcolumn)
-        
-        ' Define parameters
-        Dim PlotTitle As String
-        Dim PlotTimeMin As Double
-        Dim PlotTimeMax As Double
-        
-        PlotTitle = .Cells(TITLE_ROW, Cellcolumn)
-        PlotTimeMin = .Cells(TMIN_ROW, Cellcolumn)
-        PlotTimeMax = .Cells(TMIN_ROW, Cellcolumn + 1)
-    End With
+    ' RELAP5 input file (.i) - existing
+    Dim Inputfile As New R5PostFileObject
+    Inputfile.CreateByParts ThisWorkbook.Path, sht.Cells(INPUTFILE_ROW, Cellcolumn)
+    
+    ' RELAP5 output file (.o) - created in ProcR5Calc
+    Dim OutputFile As New R5PostFileObject
+    OutputFile.CreateByParts ThisWorkbook.Path, sht.Cells(OUTPUTFILE_ROW, Cellcolumn)
+    
+    ' RELAP5 restart file (.rst) - created in ProcR5Calc
+    Dim RestartFile As New R5PostFileObject
+    RestartFile.CreateByParts ThisWorkbook.Path, sht.Cells(RSTFILE_ROW, Cellcolumn)
+    
+    ' Demuxed restart file (.dmx) - created in ProcR2DMX
+    Dim Demuxfile As New R5PostFileObject
+    Demuxfile.CreateByParts ThisWorkbook.Path, sht.Cells(DMXFILE_ROW, Cellcolumn)
+    
+    ' Strip request file, global or local - existing and used by ProcR5Strip
+    Dim StripRequestfile1 As New R5PostFileObject
+    If sht.Cells(STRIPFILE1_ROW, Cellcolumn) = "" Then
+        StripRequestfile1.CreateByParts ThisWorkbook.Path, sht.Range(GLOBAL_STRIPFILE)
+    Else
+        StripRequestfile1.CreateByParts ThisWorkbook.Path, sht.Cells(STRIPFILE1_ROW, Cellcolumn)
+    End If
+    
+    ' Strip file (.str) - created in ProcR5Strip
+    Dim Stripfile1 As New R5PostFileObject
+    Stripfile1.CreateByParts ThisWorkbook.Path, sht.Cells(STRFILE1_ROW, Cellcolumn)
+    
+    ' Parameter file, global or local - existing and used by ProcTHistPlot
+    Dim Paramfile As New R5PostFileObject
+    If sht.Cells(PARAMFILE_ROW, Cellcolumn) = "" Then
+        Paramfile.CreateByParts ThisWorkbook.Path, sht.Range(GLOBAL_PARAMFILE)
+    Else
+        Paramfile.CreateByParts ThisWorkbook.Path, sht.Cells(PARAMFILE_ROW, Cellcolumn)
+    End If
+    
+    ' PostScript file (.ps) - created by ProcThistPlot and used by ProcPs2Pdf
+    Dim PSfile1 As New R5PostFileObject
+    PSfile1.CreateByParts ThisWorkbook.Path, sht.Cells(PSFILE1_ROW, Cellcolumn)
+    
+    ' PDF file (.pdf) - created by ProcPs2Pdf
+    Dim PDFfile1 As New R5PostFileObject
+    PDFfile1.CreateByParts ThisWorkbook.Path, sht.Cells(PDFFILE1_ROW, Cellcolumn)
+    
+    ' CSV file (.csv) - created by ProcStr2Csv
+    Dim Csvfile As New R5PostFileObject
+    Csvfile.CreateByParts ThisWorkbook.Path, sht.Cells(CSVFILE_ROW, Cellcolumn)
+    
+    
+    ' Define parameters used in ProcTHistPlot
+    Dim PlotTitle As String
+    Dim PlotTimeMin As Double
+    Dim PlotTimeMax As Double
+    
+    PlotTitle = sht.Cells(TITLE_ROW, Cellcolumn)
+    PlotTimeMin = sht.Cells(TMIN_ROW, Cellcolumn)
+    PlotTimeMax = sht.Cells(TMIN_ROW, Cellcolumn + 1)
+    
+    ' ---------------CREATE PROCESSES-------------------
+    '
+    ' Create "Copy steady state restart file" process
+    Dim ProcCopySSRestartFile As New ProcessManual
+    Dim UseBaseRst As Boolean
+    Dim s As New ResourceSprintf
+    If sht.Cells(LOGFILE_ROW, Cellcolumn) = "" Then
+        UseBaseRst = False
+        ProcCopySSRestartFile.Create ""
+    Else
+        UseBaseRst = True
+        Dim fBefore As New CollectionFileList
+        Dim fAfter As New CollectionFileList
+        fBefore.Add SteadyStateRestartfile
+        fAfter.AddMany SteadyStateRestartfile, RestartFile
+    
+        ProcCopySSRestartFile.Create s.sprintf("copy %s %s /Y", SteadyStateRestartfile.GetRelativePath(Inputfile.FolderPath & "\"), RestartFile.Filename), FilesBeforeProcess:=fBefore, FilesAfterProcess:=fAfter
+    End If
     
     ' Create Relap5 calculation process
     Dim ProcR5Calc As New ProcessR5Calc
@@ -301,30 +339,35 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
     Dim questionString As String, questionTitle As String
     
     If Action = Calc Then
+        If UseBaseRst = True Then Calculate.Add ProcCopySSRestartFile
         Calculate.Add ProcR5Calc
         questionTitle = "Perform calculation?"
         questionString = "Perform RELAP5-calculation on '" & Inputfile.FullPath & "'?"
         
     ElseIf Action = CalcAndPost Then
+        If UseBaseRst = True Then Calculate.Add ProcCopySSRestartFile
         Calculate.Add ProcR5Calc
         Calculate.Add ProcR5Strip
         Calculate.Add ProcStr2Csv
-        Calculate.Add ProcR2DMX
         Calculate.Add ProcTHistPlot
+        Calculate.Add ProcPs2Pdf
+        Calculate.Add ProcR2DMX
         
         questionTitle = "Perform calculation+postprocessing?"
         questionString = "Perform RELAP5-calculation and postprocessing on '" & Inputfile.FullPath & "'?"
         
     ElseIf Action = Post Then
         Calculate.Add ProcR5Strip
-        Calculate.Add ProcR2DMX
         Calculate.Add ProcStr2Csv
         Calculate.Add ProcTHistPlot
+        Calculate.Add ProcPs2Pdf
+        Calculate.Add ProcR2DMX
         
         questionTitle = "Perform postprocessing?"
         questionString = "Perform RELAP5-postprocessing on '" & RestartFile.FullPath & "'?"
         
     ElseIf Action = CalcStripDemux Then
+        If UseBaseRst = True Then Calculate.Add ProcCopySSRestartFile
         Calculate.Add ProcR5Calc
         Calculate.Add ProcR5Strip
         Calculate.Add ProcStr2Csv
@@ -343,7 +386,6 @@ Private Sub CalculateOrPost(Cellcolumn As Long, Action As TypeOfAction)
         Calculate.Add ProcPs2Pdf
         questionTitle = "Convert to pdf?"
         questionString = "Convert following ps-files to pdf '" & PSfile1.FullPath & "'?"
-        
     End If
     
     If Calculate.ProcessChainOK = True Then
@@ -378,13 +420,11 @@ Private Function SplitShellCommand(ByVal ShellCommand As String, Optional ByVal 
     Dim i As Integer
     Arr = Split(ShellCommand, Separator)
     
-    
     For i = LBound(Arr) To UBound(Arr)
         outputString = outputString & Arr(i) & IIf(i = UBound(Arr), "", Separator & vbNewLine)
     Next i
     
     SplitShellCommand = outputString
-    
     
 End Function
 
@@ -462,7 +502,6 @@ Sub SetPaths()
 '
     Dim sht As Worksheet
     Set sht = ThisWorkbook.ActiveSheet
-    
     
     ' Check executables
     Dim fileCurr As New R5PostFileObject

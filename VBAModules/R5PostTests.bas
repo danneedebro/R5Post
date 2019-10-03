@@ -92,6 +92,31 @@ Private Sub TestProcessTHistPlot()
     Debug.Print "</TESTING PROCESS>"
 End Sub
 
+Private Sub TestProcessManual()
+' Action: Copy file
+'
+    Dim RequiredFiles As New CollectionFileList
+    Dim FilesBefore As New CollectionFileList
+    Dim FilesAfter As New CollectionFileList
+
+    Dim fileSource As New R5PostFileObject
+    fileSource.CreateByParts ThisWorkbook.Path, "SteadyState.rst"
+    
+    Dim fileTarget As New R5PostFileObject
+    fileTarget.CreateByParts ThisWorkbook.Path, "Case1\Case1.rst"
+    
+    FilesBefore.Add fileSource
+    FilesAfter.AddMany fileSource, fileTarget
+
+    Dim ProcCopyFile As New ProcessManual
+    Dim s As New ResourceSprintf
+    ProcCopyFile.Create s.sprintf("cp %s %s -f", fileSource.GetRelativePath(fileTarget.FolderPath & "\"), fileTarget.Filename), FilesBeforeProcess:=FilesBefore, FilesAfterProcess:=FilesAfter
+    
+    Debug.Print ProcCopyFile.GetShellCommand
+    
+
+End Sub
+
 
 Private Sub TestAptplotOpen()
     Debug.Print "<TESTING PROCESS>"
